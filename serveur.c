@@ -13,6 +13,25 @@
 #define BUFLEN 512
 #define PORT 25655
 
+#define STATE_OPEN 1
+#define STATE_CLOSE 0
+
+int setState(int state){
+	time_t tA;
+	time_t tB;
+
+	tA = time(0);
+	if(state == STATE_OPEN){
+		system("eject");
+	}
+	else if(state == STATE_CLOSE){
+		system("eject -t");
+	}
+	tB = time(0);
+
+	return tB - tA;
+}
+
 int main(void)
 {
 	char* strOpen = "Ouvert";
@@ -75,25 +94,36 @@ int main(void)
 
 			// Traitement
 			printf("Commande : %s\n", buf);
+
+			// OUVERTURE
 			if(strcmp(buf,strComOpen) == 0){
-				system("eject");
-				if(open){
-					taille = snprintf(buf, BUFLEN, "%s (Deja %s)", strDone, strOpen);
+				if(setState(STATE_OPEN) > 0 && open == STATE_OPEN){
+					taille = snprintf(buf, BUFLEN, "%s (systeme force)", strDone);
+				}
+				else if(open == STATE_OPEN){
+					taille = snprintf(buf, BUFLEN, "%s (deja %s)", strDone, strOpen);
 				}
 				else{
 					taille = snprintf(buf, BUFLEN, "%s", strDone);
-					open = 1;
 				}
+
+				open = STATE_OPEN;
 			}
+			// FERMETURE
 			else if(strcmp(buf,strComClose) == 0){
-				system("eject -t");
-				if(!open)
-					taille = snprintf(buf, BUFLEN, "%s (Deja %s)", strDone, strClose);
+				if(setState(STATE_CLOSE) > 0 && open == STATE_CLOSE){
+					taille = snprintf(buf, BUFLEN, "%s (systeme force)", strDone);
+				}
+				else if(open == STATE_CLOSE){
+					taille = snprintf(buf, BUFLEN, "%s (deja %s)", strDone, strClose);
+				}
 				else{
 					taille = snprintf(buf, BUFLEN, "%s", strDone);
-					open = 0;
 				}
+
+				open = STATE_CLOSE;
 			}
+			// ETAT
 			else if(strcmp(buf,strComState) == 0){
 				tA = time(0);
 				if(open){
@@ -106,7 +136,7 @@ int main(void)
 				}
 				tB = time(0);
 				if(tB - tA > 0)
-					taille = snprintf(buf, BUFLEN, "%s (le systeme a change)", temp);
+					taille = snprintf(buf, BUFLEN, "%s (systeme force)", temp);
 				else
 					taille = snprintf(buf, BUFLEN, "%s", temp);
 			}
@@ -114,15 +144,17 @@ int main(void)
 				taille = snprintf(buf, BUFLEN, "Error");
 			}
 
+			printf("Réponse : %s\n",buf);
+
 			// Chiffrement
 			taille = AES128_CBC_encrypt_buffer(bufferOut, (unsigned char*)buf, taille, key ,iv);
 			// Réponse
 			write(clisock, bufferOut, taille);
 
-			// Fin de connexion
-			close(clisock);			
+			// Fin de connexion			
+			printf("- Fin de connexion\n\n");
+			close(clisock);
 			bzero(buf, BUFLEN);
-			printf("Fait\n");
 		}
 		else{
 			printf("%d-%s\n",errno,strerror(errno));
