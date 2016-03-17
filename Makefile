@@ -1,12 +1,7 @@
 CC           = gcc
-CFLAGS       = -Wall -Os
-OBJCOPY      = objcopy
+CFLAGS       = -Wall
 
-# include path to AVR library
-INCLUDE_PATH = /usr/lib/avr/include
-
-.SILENT:
-.PHONY:  lint clean
+all: serveur client
 
 serveur.o : serveur.c
 	# compiling serveur
@@ -16,28 +11,21 @@ client.o : client.c
 	# compiling client
 	$(CC) $(CFLAGS) -c client.c -o client.o
 
-test.o : test.c
-	# compiling test.c
-	$(CC) $(CFLAGS) -c test.c -o test.o
-
 aes.o : aes.h aes.c
 	# compiling aes.c
 	$(CC) $(CFLAGS) -c aes.c -o aes.o
 
-client : aes.o client.o
-	# linking object code to binary
-	$(CC) $(CFLAGS) aes.o client.o -o client
+sha256.o : sha256.h sha256.c
+	# compiling sha256.c
+	$(CC) $(CFLAGS) -c sha256.c -o sha256.o
 
-serveur : aes.o serveur.o
+client : sha256.o  aes.o client.o
 	# linking object code to binary
-	$(CC) $(CFLAGS) aes.o serveur.o -o serveur
+	$(CC) $(CFLAGS) sha256.o aes.o client.o -o client
 
-test.out : aes.o test.o
+serveur : sha256.o aes.o serveur.o
 	# linking object code to binary
-	$(CC) $(CFLAGS) aes.o test.o -o test.out
-
-small: test.out
-	$(OBJCOPY) -j .text -O ihex test.out rom.hex
+	$(CC) $(CFLAGS) sha256.o aes.o serveur.o -o serveur
 
 clean:
 	rm -f *.OBJ *.LST *.o *.gch *.out *.hex *.map
