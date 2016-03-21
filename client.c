@@ -8,38 +8,28 @@
 
 #include "aes.h"
 #include "sha256.h"
+#include "network.h"
 
 #define BUFLEN 512
-#define PORT 25655
-
-#define CLI_AUTH 1
-#define SERV_AUTH 2
-#define CLI_MES 3
-#define	SER_MES 4
 
 struct User {
 	char id[BUFLEN];
 	char mdp[BUFLEN];
 };
 
+void setUser(struct User* u, char* id, char* mdp){
+	snprintf(u->id, BUFLEN, id);
+	snprintf(u->mdp, BUFLEN, mdp);
+}
+
 int main(int argc, char **argv)
 {
 	// A CHANGER
 	struct User current;
-	bzero(current.id, BUFLEN);
-	snprintf(current.id, BUFLEN, "JeanMichel");
-	bzero(current.mdp, BUFLEN);
-	snprintf(current.mdp, BUFLEN, "Crapeaud");
-
-	char* strOpen = "Ouvert";
-	char* strClose = "Ferme";
-	char* strDone = "Fait";
-
-	char* strComOpen = "Ouvrir";
-	char* strComClose = "Fermer";
-	char* strComState = "Etat";
+	setUser(&current,"JeanMichel","Crapeaud");
 
 	char commande[BUFLEN];
+	TAG tag;
 	char send;
 
 	struct sockaddr_in si_other;
@@ -63,8 +53,7 @@ int main(int argc, char **argv)
 	// ----- Authentification -----
 
 	// Calcul de h(id)
-	sha256((unsigned char*)current.id,strlen(current.id),bufferOut+1);
-	bufferOut[0] = CLI_AUTH;
+	sha256((unsigned char*)current.id,strlen(current.id),bufferOut);
 	//connexion au serveur
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	if(s == -1 ) return -1;
@@ -77,7 +66,9 @@ int main(int argc, char **argv)
 		return -2;
 	}
 	// Envoi de hId en clair
-	write(s, bufferOut, SHA256_BLOCK_SIZE+1);
+	tag = CLI_AUTH;
+	write(s, &tag, 1);
+	write(s, bufferOut, SHA256_BLOCK_SIZE);
 
 	// Reception
 	taille = read(s, bufferIn, BUFLEN);
@@ -94,17 +85,17 @@ int main(int argc, char **argv)
 		scanf("%512s", commande);
 		send = 1;
 
-		if(strcmp(commande,"open") == 0)
+		if(strcmp(commande,strComOpen) == 0)
 			taille = snprintf(buf, BUFLEN, "%s",strComOpen);
-		else if(strcmp(commande,"close") == 0)
+		else if(strcmp(commande,strComClose) == 0)
 			taille = snprintf(buf, BUFLEN, "%s",strComClose);
-		else if(strcmp(commande,"state") == 0)
+		else if(strcmp(commande,strComState) == 0)
 			taille = snprintf(buf, BUFLEN, "%s",strComState);
 		else if(strcmp(commande,"quit") == 0){
 			send = 0;
 		}
 		else{
-			printf("commandes : open | close | state | quit\n");
+			printf("commandes : %s| %s | %s | quit\n",strComOpen,strComClose,strComState);
 			send = 0;
 		}
 
@@ -124,6 +115,8 @@ int main(int argc, char **argv)
 			// Chiffrement
 			aes_encrypt_ctr((unsigned char*)buf,taille,bufferOut,key,256,iv);			
 			// Envois
+			tag = CLI_MES;
+			write(s, &tag, 1);
 			write(s, bufferOut, taille);
 			bzero(buf, BUFLEN);
 			

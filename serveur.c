@@ -8,19 +8,11 @@
 #include <unistd.h>
 #include <time.h>
 
+#include "network.h"
 #include "aes.h"
 #include "sha256.h"
 
 #define BUFLEN 512
-#define PORT 25655
-
-#define STATE_OPEN 1
-#define STATE_CLOSE 0
-
-#define CLI_AUTH 1
-#define SERV_AUTH 2
-#define CLI_MES 3
-#define	SER_MES 4
 
 typedef unsigned char TAG;
 
@@ -36,10 +28,12 @@ int setState(int state){
 
 	tA = time(0);
 	if(state == STATE_OPEN){
-		system("eject");
+		//system("eject");
+		printf("system(eject)");
 	}
 	else if(state == STATE_CLOSE){
-		system("eject -t");
+		//system("eject -t");
+		printf("system(eject -t)");
 	}
 	tB = time(0);
 
@@ -48,14 +42,6 @@ int setState(int state){
 
 int main(void)
 {
-	char* strOpen = "Ouvert";
-	char* strClose = "Ferme";
-	char* strDone = "Fait";
-
-	char* strComOpen = "Ouvrir";
-	char* strComClose = "Fermer";
-	char* strComState = "Etat";
-
 	BYTE hId[SHA256_BLOCK_SIZE] = {0x7a,0xb2,0x8b,0xe1,0x45,0x36,0x7c,0x0c,0xc6,0x1d,0x3b,0xb0,0x3f,0x34,0x7c,0x07,0xe5,0x65,0x2e,0xac,0x9d,0xe4,0xd6,0xec,0xd3,0x41,0x18,0x59,0x4d,0x79,0x2d,0x9b};
 	BYTE hMpdSel[SHA256_BLOCK_SIZE] = {0xa0,0x6d,0x66,0xc5,0x65,0x17,0x1c,0x64,0x7d,0xfc,0x13,0x6b,0x3d,0x94,0x83,0xef,0xaf,0x21,0x90,0x0a,0x38,0xa1,0x5d,0xe4,0xa6,0x59,0x15,0x6a,0xd6,0xb6,0x01,0xf2};
 	BYTE sel[SHA256_BLOCK_SIZE] = {0x30,0x5b,0x8c,0xe1,0xb7,0x91,0xe0,0xdf,0xa0,0x6b,0xc1,0x3b,0xc1,0x6c,0xfa,0xf0,0x08,0x79,0xb6,0xa0,0x3a,0x50,0x79,0xdd,0xdf,0x50,0x51,0xbd,0xe4,0x5a,0x13,0x90};
@@ -91,23 +77,26 @@ int main(void)
 	if( bind(s, (struct sockaddr*)&si_me, sizeof(si_me)) == -1 ) { return -2; }
 
 	//initialisation du lecteur
-	system("eject -t");
+	setState(STATE_CLOSE);
 	open = 0;
 
 	while(1){
 		listen(s, 5);
 		slen = sizeof(si_other);
 		if( (clisock=accept(s, (struct sockaddr*)&si_other, &slen)) > 0 ) {
+			bzero(buf, BUFLEN);
+			bzero(bufferIn, BUFLEN);
+			bzero(bufferOut, BUFLEN);
 				
 			printf("- Connexion de %s:%d\n", inet_ntoa(si_other.sin_addr),ntohs(si_other.sin_port));
 
 			// Réception
-			taille = read(clisock, bufferIn, BUFLEN+1);
-			tag = bufferIn[0];
+			read(clisock, &tag, 1);
+			taille = read(clisock, bufferIn, BUFLEN);
 
 			if(tag == CLI_AUTH){
 				printf("Authentification\n");
-				if(!memcmp(hId,bufferIn+1,32)){
+				if(!memcmp(hId,bufferIn,32)){
 					printf("Identifiant valide\n");
 					// A FAIRE
 				} else{
@@ -115,7 +104,7 @@ int main(void)
 				}
 			}
 			else if(tag == CLI_MES){
-				aes_decrypt_ctr(bufferIn+1,taille,(unsigned char*)buf,key,256,iv);
+				aes_decrypt_ctr(bufferIn,taille,(unsigned char*)buf,key,256,iv);
 
 				// Traitement
 				printf("Commande : %s\n", buf);
@@ -142,17 +131,15 @@ int main(void)
 				}
 				// ETAT
 				else if(strcmp(buf,strComState) == 0){
-					tA = time(0);
 					if(open){
-						system("eject");
+						tA = setState(STATE_OPEN);
 						temp = strOpen;
 					}
 					else{
-						system("eject -t");
+						tA = setState(STATE_CLOSE);
 						temp = strClose;
 					}
-					tB = time(0);
-					if(tB - tA > 0)
+					if(tA > 0)
 						taille = snprintf(buf, BUFLEN, "%s (systeme force)", temp);
 					else
 						taille = snprintf(buf, BUFLEN, "%s", temp);
@@ -177,7 +164,6 @@ int main(void)
 			// Fin de connexion			
 			printf("- Fin de connexion\n\n");
 			close(clisock);
-			bzero(buf, BUFLEN);
 		}
 		else{
 			printf("%d-%s\n",errno,strerror(errno));

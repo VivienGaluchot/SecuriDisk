@@ -19,13 +19,17 @@ sha256.o : sha256.h sha256.c
 	# compiling sha256.c
 	$(CC) $(CFLAGS) -c sha256.c -o sha256.o
 
-client : sha256.o  aes.o client.o
-	# linking object code to binary
-	$(CC) $(CFLAGS) sha256.o aes.o client.o -o client
+network.o : network.h network.c
+	# compiling network.c
+	$(CC) $(CFLAGS) -c network.c -o network.o
 
-serveur : sha256.o aes.o serveur.o
+client : network.o sha256.o  aes.o client.o
 	# linking object code to binary
-	$(CC) $(CFLAGS) sha256.o aes.o serveur.o -o serveur
+	$(CC) $(CFLAGS) network.o sha256.o aes.o client.o -o client
+
+serveur : network.o sha256.o aes.o serveur.o
+	# linking object code to binary
+	$(CC) $(CFLAGS) network.o sha256.o aes.o serveur.o -o serveur
 
 clean:
 	rm -f *.OBJ *.LST *.o *.gch *.out *.hex *.map
