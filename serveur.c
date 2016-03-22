@@ -29,11 +29,11 @@ int setState(int state){
 	tA = time(0);
 	if(state == STATE_OPEN){
 		//system("eject");
-		printf("system(eject)");
+		printf("system(eject)/n");
 	}
 	else if(state == STATE_CLOSE){
 		//system("eject -t");
-		printf("system(eject -t)");
+		printf("system(eject -t)/n");
 	}
 	tB = time(0);
 
@@ -54,8 +54,7 @@ int main(void)
 	char open;
 	TAG tag;
 
-	time_t tA;
-	time_t tB;
+	time_t t;
 
 	BYTE iniKey[32] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32};
 	WORD key[60]; // ????
@@ -132,14 +131,14 @@ int main(void)
 				// ETAT
 				else if(strcmp(buf,strComState) == 0){
 					if(open){
-						tA = setState(STATE_OPEN);
+						t = setState(STATE_OPEN);
 						temp = strOpen;
 					}
 					else{
-						tA = setState(STATE_CLOSE);
+						t = setState(STATE_CLOSE);
 						temp = strClose;
 					}
-					if(tA > 0)
+					if(t > 0)
 						taille = snprintf(buf, BUFLEN, "%s (systeme force)", temp);
 					else
 						taille = snprintf(buf, BUFLEN, "%s", temp);
@@ -151,17 +150,16 @@ int main(void)
 				printf("Réponse : %s\n",buf);
 
 				// Chiffrement
-				if(taille > BUFLEN) return -5;
-				aes_encrypt_ctr((unsigned char*)buf,taille,bufferOut+1,key,256,iv);
-				// Ajout du tag
-				bufferOut[0] = SER_MES;
+				aes_encrypt_ctr((unsigned char*)buf,taille,bufferOut,key,256,iv);
 				// Réponse
+				tag = SER_MES;
+				write(clisock, &tag, 1);
 				write(clisock, bufferOut, taille);
 			}else{
-				printf("Tag non reconnu\n");
+				printf("Erreur de tag (%d reçu)\n", tag);
 			}
 
-			// Fin de connexion			
+			// Fin de connexion
 			printf("- Fin de connexion\n\n");
 			close(clisock);
 		}

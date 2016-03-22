@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 
 	struct sockaddr_in si_other;
 	size_t taille;
-	unsigned int s;
+	unsigned int sock;
 	char buf[BUFLEN];
 
 	BYTE iniKey[32] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32};
@@ -55,25 +55,26 @@ int main(int argc, char **argv)
 	// Calcul de h(id)
 	sha256((unsigned char*)current.id,strlen(current.id),bufferOut);
 	//connexion au serveur
-	s = socket(AF_INET, SOCK_STREAM, 0);
-	if(s == -1 ) return -1;
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(sock == -1 ) return -1;
 	bzero(&si_other, sizeof(struct sockaddr_in));
 	si_other.sin_family = AF_INET;
 	si_other.sin_port = htons(PORT);
 	if( inet_aton(argv[1], &si_other.sin_addr)==0 ) { return -2; }
-	if( connect(s, (struct sockaddr*)&si_other, sizeof(struct sockaddr)) < 0 ){
+	if( connect(sock, (struct sockaddr*)&si_other, sizeof(struct sockaddr)) < 0 ){
 		printf("Connexion échouée\n");
 		return -2;
 	}
 	// Envoi de hId en clair
 	tag = CLI_AUTH;
-	write(s, &tag, 1);
-	write(s, bufferOut, SHA256_BLOCK_SIZE);
+	write(sock, &tag, 1);
+	write(sock, bufferOut, SHA256_BLOCK_SIZE);
 
 	// Reception
-	taille = read(s, bufferIn, BUFLEN);
+	read(sock, &tag, 1);
+	taille = read(sock, bufferIn, BUFLEN);
 
-	close(s);
+	close(sock);
 
 	while(strcmp(commande,"quit") != 0){
 		bzero(commande, BUFLEN);
@@ -81,7 +82,7 @@ int main(int argc, char **argv)
 		bzero(bufferOut, BUFLEN);
 		bzero(bufferIn, BUFLEN);
 
-		printf("Entrez une commande : ");
+		printf("Commande : ");
 		scanf("%512s", commande);
 		send = 1;
 
@@ -101,13 +102,13 @@ int main(int argc, char **argv)
 
 		if(send){
 			//connexion au serveur
-			s = socket(AF_INET, SOCK_STREAM, 0);
-			if(s == -1 ) return -1;
+			sock = socket(AF_INET, SOCK_STREAM, 0);
+			if(sock == -1 ) return -1;
 			bzero(&si_other, sizeof(struct sockaddr_in));
 			si_other.sin_family = AF_INET;
 			si_other.sin_port = htons(PORT);
 			if( inet_aton(argv[1], &si_other.sin_addr)==0 ) { return -2; }
-			if( connect(s, (struct sockaddr*)&si_other, sizeof(struct sockaddr)) < 0 ){
+			if( connect(sock, (struct sockaddr*)&si_other, sizeof(struct sockaddr)) < 0 ){
 				printf("Connexion échouée\n");
 				return -2;
 			}
@@ -116,19 +117,24 @@ int main(int argc, char **argv)
 			aes_encrypt_ctr((unsigned char*)buf,taille,bufferOut,key,256,iv);			
 			// Envois
 			tag = CLI_MES;
-			write(s, &tag, 1);
-			write(s, bufferOut, taille);
+			write(sock, &tag, 1);
+			write(sock, bufferOut, taille);
 			bzero(buf, BUFLEN);
 			
 			// Reception
-			taille = read(s, bufferIn, BUFLEN);
-			// Déchiffrement
-			aes_decrypt_ctr(bufferIn,taille,(unsigned char*)buf,key,256,iv);
-
-			printf("Reponse : %s\n", buf);
+			read(sock, &tag, 1);
+			taille = read(sock, bufferIn, BUFLEN);
+			if(tag == SER_MES){
+				// Déchiffrement
+				aes_decrypt_ctr(bufferIn,taille,(unsigned char*)buf,key,256,iv);
+				printf("Reponse : %s\n", buf);
+			}
+			else
+				printf("Erreur de tag (%d reçu)\n", tag);
 
 			// Deconnexion
-			close(s);
+			printf(" \n");
+			close(sock);
 		}
 	}	
 	return 0;
