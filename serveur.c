@@ -28,12 +28,12 @@ int setState(int state){
 
 	tA = time(0);
 	if(state == STATE_OPEN){
-		//system("eject");
-		printf("system(eject)/n");
+		system("eject");
+		printf("system(eject)\n");
 	}
 	else if(state == STATE_CLOSE){
-		//system("eject -t");
-		printf("system(eject -t)/n");
+		system("eject -t");
+		printf("system(eject -t)\n");
 	}
 	tB = time(0);
 
