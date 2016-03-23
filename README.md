@@ -5,15 +5,17 @@ Protocole sécurisé d'échange de commande client/serveur.
 * Vincent Hernandez : vincent.hernandez@etu.univ-amu.fr
 
 ## Compiler
-Le programme est fait pour linux. Compilable avec gcc et make : `make client`, `make serveur`
+Le programme est fait pour linux. Compilable avec gcc et make :
+* se positionner à la racine du fichier
+* lancer la commander `make`
 
 ## Utilisation du serveur
 Lancer le serveur : `./serveur`
 
 ## Utilisation du client
-Lancer le client : `./client <ip>`
+Lancer le client et se connecter à au serveur d'ip <ip> : `./client <ip>`
 
 Commandes disponibles :
-* ouvrir : `open`
-* fermer :`close`
-* etat : `state`
+* ouvrir : `Ouvrir`
+* fermer :`Fermer`
+* etat : `Etat`
