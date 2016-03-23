@@ -18,5 +18,5 @@ Lancer le client et se connecter à au serveur d'ip <ip> : `./client <ip>`
 
 Commandes disponibles :
 * ouvrir : `Ouvrir`
-* fermer :`Fermer`
+* fermer : `Fermer`
 * etat : `Etat`
