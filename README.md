@@ -5,7 +5,8 @@ Protocole sécurisé d'échange de commande client/serveur.
 * Vincent Hernandez : vincent.hernandez@etu.univ-amu.fr
 
 ## Compiler
-Le programme est fait pour linux. Compilable avec gcc et make :
+Le programme est fait pour les sytemes Linux. Les fontions cryptographiques sont intégrées, il ne nécéssite pas de bibliothèque externe.
+Pour compiler :
 * se positionner à la racine du fichier
 * lancer la commander `make`
 
