@@ -117,6 +117,17 @@ int main(void)
 
 				} else{
 					printf("Identifiant invalide\n");
+
+					// Envoi de valeur aléatoires
+					buffRand(bufferOut, 32);
+					tag = SERV_AUTH;
+					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
+					buffRand(bufferOut, 16);
+					tag = SERV_AUTH;
+					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
+					buffRand(bufferOut, 32);
+					tag = SERV_AUTH;
+					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
 				}
 			}
 			else if(tag == CLI_MES && authent){

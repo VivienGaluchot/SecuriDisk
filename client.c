@@ -65,8 +65,6 @@ int main(int argc, char **argv)
 	printf("Mot de passe : ");
 	scanf("%s",current.mdp);
 
-	printf("---------------------------------\n");
-
 	// Calcul de h(id)
 	sha256((unsigned char*)current.id,strlen(current.id),bufferOut);
 
@@ -83,15 +81,15 @@ int main(int argc, char **argv)
 	// Reception
 	// Sel
 	taille = netRead(&tag, sel, 32);
-	if(taille != 32) return 0;
+	if(taille != 32 || tag != SER_AUTH) return 0;
 
 	// IV
 	taille = netRead(&tag, iv, 16);
-	if(taille != 16) return 0;
+	if(taille != 16 || tag != SER_AUTH) return 0;
 
 	// Clé de session chiffrée
 	taille = netRead(&tag, bufferIn, 32);
-	if(taille != 32) return 0;
+	if(taille != 32 || tag != SER_AUTH) return 0;
 
 	// Calcul de la clé d'authentification
 	ouExclusiveur(current.mdp, sel, 32, (unsigned char*) buf);
@@ -104,6 +102,8 @@ int main(int argc, char **argv)
 	aes_key_setup(iniKey,key,256);
 
 	netDisconnect();
+
+	printf("---------------------------------\n");
 
 	// ----- Fin Authentification -----
 
