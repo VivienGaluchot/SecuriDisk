@@ -1,10 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <errno.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -28,11 +24,11 @@ int setState(int state){
 
 	tA = time(0);
 	if(state == STATE_OPEN){
-		system("eject");
+		//system("eject");
 		printf("system(eject)\n");
 	}
 	else if(state == STATE_CLOSE){
-		system("eject -t");
+		//system("eject -t");
 		printf("system(eject -t)\n");
 	}
 	tB = time(0);
@@ -48,8 +44,8 @@ int main(void)
 	
 	char* temp;
 
-	struct sockaddr_in si_me, si_other;
-	unsigned int slen, clisock, s, taille;
+	size_t taille;
+
 	char buf[BUFLEN];
 	char open;
 	TAG tag;
@@ -66,32 +62,25 @@ int main(void)
 
 	//AES128_CBC_encrypt_buffer(buffer, in, 16, key ,iv);
 
-	if( (s = socket(AF_INET, SOCK_STREAM, 0)) == -1 ) { return -1; }
-	taille = 1;
-	if( (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &taille, sizeof(int))) == -1 ) { return -1; }
-	memset((char*)&si_me, 0, sizeof(si_me));
-	si_me.sin_family = AF_INET;
-	si_me.sin_port = htons(PORT);
-	si_me.sin_addr.s_addr = htonl(INADDR_ANY);
-	if( bind(s, (struct sockaddr*)&si_me, sizeof(si_me)) == -1 ) { return -2; }
+	// Initialisation du serveur
+	if(netServInit() != 0){
+		printf("Impossible d'initialiser le serveur");
+		return 0;
+	}
 
 	//initialisation du lecteur
 	setState(STATE_CLOSE);
 	open = 0;
 
 	while(1){
-		listen(s, 5);
-		slen = sizeof(si_other);
-		if( (clisock=accept(s, (struct sockaddr*)&si_other, &slen)) > 0 ) {
+		netServListen();
+		if(netServAccept()) {
 			bzero(buf, BUFLEN);
 			bzero(bufferIn, BUFLEN);
 			bzero(bufferOut, BUFLEN);
-				
-			printf("- Connexion de %s:%d\n", inet_ntoa(si_other.sin_addr),ntohs(si_other.sin_port));
 
 			// Réception
-			read(clisock, &tag, 1);
-			taille = read(clisock, bufferIn, BUFLEN);
+			taille = netRead(&tag,bufferIn,BUFLEN);
 
 			if(tag == CLI_AUTH){
 				printf("Authentification\n");
@@ -153,20 +142,16 @@ int main(void)
 				aes_encrypt_ctr((unsigned char*)buf,taille,bufferOut,key,256,iv);
 				// Réponse
 				tag = SER_MES;
-				write(clisock, &tag, 1);
-				write(clisock, bufferOut, taille);
+				netWrite(&tag,bufferOut,taille);
 			}else{
 				printf("Erreur de tag (%d reçu)\n", tag);
 			}
 
 			// Fin de connexion
 			printf("- Fin de connexion\n\n");
-			close(clisock);
-		}
-		else{
-			printf("%d-%s\n",errno,strerror(errno));
+			netDisconnect();
 		}
 	}
-	close(s);
+	netServDisconnect();
 	return 0;
 }

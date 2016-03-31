@@ -1,6 +1,17 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <errno.h>
+
+
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+
 #define PORT 25655
 
 typedef unsigned char TAG;
@@ -11,9 +22,13 @@ typedef unsigned char TAG;
 #define CLI_MES 3
 #define	SER_MES 4
 
-// Etat du lecteur
-#define STATE_OPEN 1
+// Code d'information
 #define STATE_CLOSE 0
+#define STATE_OPEN 1
+// #define DONE 2
+// #define DO_OPEN 10
+// #define DO_CLOSE 11
+// #define DO_STATE 12
 
 // Resultats
 static char* strOpen = "Ouvert";
@@ -23,5 +38,15 @@ static char* strDone = "Fait";
 static char* strComOpen = "Ouvrir";
 static char* strComClose = "Fermer";
 static char* strComState = "Etat";
+
+int netServInit();
+void netServListen();
+int netServAccept();
+void netServDisconnect();
+
+int netConnect(char* ip);
+void netWrite(TAG* t, unsigned char* buffer, size_t bufferSize);
+size_t netRead(TAG* t, unsigned char* buffer, size_t bufferSize);
+void netDisconnect();
 
 #endif   // NETWORK_H
