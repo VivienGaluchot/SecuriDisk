@@ -24,26 +24,31 @@ int setState(int state){
 
 	tA = time(0);
 	if(state == STATE_OPEN){
-		//system("eject");
-		printf("system(eject)\n");
+		system("eject");
 	}
 	else if(state == STATE_CLOSE){
-		//system("eject -t");
-		printf("system(eject -t)\n");
+		system("eject -t");
 	}
 	tB = time(0);
 
 	return tB - tA;
 }
 
+void buffRand(BYTE* buffer, size_t bufferSize){
+	int i;
+	for(i=0; i<bufferSize; i++){
+		buffer[i] = rand();
+	}
+}
+
 int main(void)
 {
+	// Données d'authentification de l'utilisateur 'JeanMichel' 'Crapeaud'
 	BYTE hId[SHA256_BLOCK_SIZE] = {0x7a,0xb2,0x8b,0xe1,0x45,0x36,0x7c,0x0c,0xc6,0x1d,0x3b,0xb0,0x3f,0x34,0x7c,0x07,0xe5,0x65,0x2e,0xac,0x9d,0xe4,0xd6,0xec,0xd3,0x41,0x18,0x59,0x4d,0x79,0x2d,0x9b};
 	BYTE hMpdSel[SHA256_BLOCK_SIZE] = {0xa0,0x6d,0x66,0xc5,0x65,0x17,0x1c,0x64,0x7d,0xfc,0x13,0x6b,0x3d,0x94,0x83,0xef,0xaf,0x21,0x90,0x0a,0x38,0xa1,0x5d,0xe4,0xa6,0x59,0x15,0x6a,0xd6,0xb6,0x01,0xf2};
 	BYTE sel[SHA256_BLOCK_SIZE] = {0x30,0x5b,0x8c,0xe1,0xb7,0x91,0xe0,0xdf,0xa0,0x6b,0xc1,0x3b,0xc1,0x6c,0xfa,0xf0,0x08,0x79,0xb6,0xa0,0x3a,0x50,0x79,0xdd,0xdf,0x50,0x51,0xbd,0xe4,0x5a,0x13,0x90};
 	
 	char* temp;
-
 	size_t taille;
 
 	char buf[BUFLEN];
@@ -52,15 +57,16 @@ int main(void)
 
 	time_t t;
 
-	BYTE iniKey[32] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32};
+	BYTE iniKey[32];
+	BYTE iv[16];
+	WORD authKey[60]; // ????
 	WORD key[60]; // ????
-	aes_key_setup(iniKey,key,256);
-	BYTE iv[16] = {0x00, 0x11, 0x22, 0x13, 0x28, 0xae, 0xd2, 0xa6, 0xa0, 0xf7, 0x15, 0x88, 0x09, 0x78, 0x4f, 0x3c};
+	char authent = 0;
 	
 	unsigned char bufferOut[BUFLEN+1];
 	unsigned char bufferIn[BUFLEN+1];
 
-	//AES128_CBC_encrypt_buffer(buffer, in, 16, key ,iv);
+	srand(time(NULL)); // initialisation de rand
 
 	// Initialisation du serveur
 	if(netServInit() != 0){
@@ -86,12 +92,35 @@ int main(void)
 				printf("Authentification\n");
 				if(!memcmp(hId,bufferIn,32)){
 					printf("Identifiant valide\n");
-					// A FAIRE
+
+					// Génération de clé, IV
+					buffRand(iniKey,32);
+					buffRand(iv,16);
+					aes_key_setup(iniKey,key,256);
+
+					// Initialisation de la clé d'authentification
+					aes_key_setup(hMpdSel,authKey,256);
+
+					// Envoi du sel
+					tag = SERV_AUTH;
+					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
+					// Envoi de l'IV					
+					tag = SERV_AUTH;
+					netWrite(&tag,iv,16);
+					// Chiffrement de la clé de session
+					aes_encrypt_ctr((unsigned char*)iniKey,32,bufferOut,authKey,256,iv);
+					// Envoi de la clé de session
+					tag = SERV_AUTH;
+					netWrite(&tag,bufferOut,taille);
+
+					authent = 1;
+
 				} else{
 					printf("Identifiant invalide\n");
 				}
 			}
-			else if(tag == CLI_MES){
+			else if(tag == CLI_MES && authent){
+				increment_iv(iv,16);
 				aes_decrypt_ctr(bufferIn,taille,(unsigned char*)buf,key,256,iv);
 
 				// Traitement
@@ -139,11 +168,16 @@ int main(void)
 				printf("Réponse : %s\n",buf);
 
 				// Chiffrement
+				increment_iv(iv,16);
 				aes_encrypt_ctr((unsigned char*)buf,taille,bufferOut,key,256,iv);
 				// Réponse
 				tag = SER_MES;
 				netWrite(&tag,bufferOut,taille);
-			}else{
+			}
+			else if(!authent) {
+				printf("Erreur : Pas authentifie\n");
+			} 
+			else{
 				printf("Erreur de tag (%d reçu)\n", tag);
 			}
 

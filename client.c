@@ -18,11 +18,23 @@ void setUser(struct User* u, char* id, char* mdp){
 	snprintf(u->mdp, BUFLEN, mdp);
 }
 
+void ouExclusiveur(char* mdp, BYTE* sel, size_t selSize, BYTE* buffer){
+	int i;
+	char strFini = 0;
+	for(i=0; i<selSize; i++){
+		if(mdp[i] == 0) strFini = 1;
+		if(!strFini){
+			buffer[i] = sel[i] ^ mdp[i];
+		}
+		else{
+			buffer[i] = sel[i];
+		}
+	}
+}
+
 int main(int argc, char **argv)
 {
-	// A CHANGER
 	struct User current;
-	setUser(&current,"JeanMichel","Crapeaud");
 
 	char commande[BUFLEN];
 	TAG tag;
@@ -31,10 +43,11 @@ int main(int argc, char **argv)
 	size_t taille;
 	char buf[BUFLEN];
 
-	BYTE iniKey[32] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32};
+	BYTE iniKey[32];
+	BYTE iv[16];
+	WORD authKey[60]; // ????
 	WORD key[60]; // ????
-	aes_key_setup(iniKey,key,256);
-	BYTE iv[16] = {0x00, 0x11, 0x22, 0x13, 0x28, 0xae, 0xd2, 0xa6, 0xa0, 0xf7, 0x15, 0x88, 0x09, 0x78, 0x4f, 0x3c};
+	BYTE sel[32];
 
 	unsigned char bufferOut[BUFLEN];
 	unsigned char bufferIn[BUFLEN];
@@ -45,6 +58,14 @@ int main(int argc, char **argv)
 	}
 
 	// ----- Authentification -----
+
+	printf("Identifiant : ");
+	scanf("%s",current.id);
+
+	printf("Mot de passe : ");
+	scanf("%s",current.mdp);
+
+	printf("---------------------------------\n");
 
 	// Calcul de h(id)
 	sha256((unsigned char*)current.id,strlen(current.id),bufferOut);
@@ -60,9 +81,31 @@ int main(int argc, char **argv)
 	netWrite(&tag, bufferOut, SHA256_BLOCK_SIZE);
 
 	// Reception
-	taille = netRead(&tag, bufferIn, BUFLEN);
+	// Sel
+	taille = netRead(&tag, sel, 32);
+	if(taille != 32) return 0;
+
+	// IV
+	taille = netRead(&tag, iv, 16);
+	if(taille != 16) return 0;
+
+	// Clé de session chiffrée
+	taille = netRead(&tag, bufferIn, 32);
+	if(taille != 32) return 0;
+
+	// Calcul de la clé d'authentification
+	ouExclusiveur(current.mdp, sel, 32, (unsigned char*) buf);
+	sha256((unsigned char*) buf,32,bufferOut);
+	// CA CHIE ICI
+	aes_key_setup(bufferOut,authKey,256);
+
+	// Déchiffrement
+	aes_decrypt_ctr(bufferIn,32,iniKey,authKey,256,iv);
+	aes_key_setup(iniKey,key,256);
 
 	netDisconnect();
+
+	// ----- Fin Authentification -----
 
 	while(strcmp(commande,"quit") != 0){
 		bzero(commande, BUFLEN);
@@ -91,11 +134,12 @@ int main(int argc, char **argv)
 		if(send){
 			//connexion au serveur
 			if(netConnect(argv[1]) != 0){
-				printf("Impossible de se connecter");
+				printf("Impossible de se connecter\n");
 				return 0;
 			}
 
 			// Chiffrement
+			increment_iv(iv,16);
 			aes_encrypt_ctr((unsigned char*)buf,taille,bufferOut,key,256,iv);			
 			
 			// Envois
@@ -107,6 +151,7 @@ int main(int argc, char **argv)
 			if(tag == SER_MES){
 				// Déchiffrement
 				bzero(buf, BUFLEN);
+				increment_iv(iv,16);
 				aes_decrypt_ctr(bufferIn,taille,(unsigned char*)buf,key,256,iv);
 				printf("Reponse : %s\n", buf);
 			}

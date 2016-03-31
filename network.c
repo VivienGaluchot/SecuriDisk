@@ -31,7 +31,7 @@ void netServListen(){
 int netServAccept(){	
 	struct sockaddr_in si_other;
 	size_t slen = sizeof(si_other);
-	sock = accept(servSock, &si_other, &slen);
+	sock = accept(servSock, (struct sockaddr * __restrict__) &si_other, (socklen_t * __restrict__) &slen);
 	if(sock > 0){
 		printf("- Connexion de %s:%d\n", inet_ntoa(si_other.sin_addr),ntohs(si_other.sin_port));
 		return 1;
