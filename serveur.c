@@ -102,15 +102,15 @@ int main(void)
 					aes_key_setup(hMpdSel,authKey,256);
 
 					// Envoi du sel
-					tag = SERV_AUTH;
+					tag = SER_AUTH;
 					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
 					// Envoi de l'IV					
-					tag = SERV_AUTH;
+					tag = SER_AUTH;
 					netWrite(&tag,iv,16);
 					// Chiffrement de la clé de session
 					aes_encrypt_ctr((unsigned char*)iniKey,32,bufferOut,authKey,256,iv);
 					// Envoi de la clé de session
-					tag = SERV_AUTH;
+					tag = SER_AUTH;
 					netWrite(&tag,bufferOut,taille);
 
 					authent = 1;
@@ -120,13 +120,13 @@ int main(void)
 
 					// Envoi de valeur aléatoires
 					buffRand(bufferOut, 32);
-					tag = SERV_AUTH;
+					tag = SER_AUTH;
 					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
 					buffRand(bufferOut, 16);
-					tag = SERV_AUTH;
+					tag = SER_AUTH;
 					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
 					buffRand(bufferOut, 32);
-					tag = SERV_AUTH;
+					tag = SER_AUTH;
 					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
 				}
 			}
