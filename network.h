@@ -18,7 +18,7 @@ typedef unsigned char TAG;
 
 // Valeur des tags
 #define CLI_AUTH 1
-#define SERV_AUTH 2
+#define SER_AUTH 2
 #define CLI_MES 3
 #define	SER_MES 4
 
