@@ -92,7 +92,6 @@ int main(void)
 				printf("Authentification\n");
 				if(!memcmp(hId,bufferIn,32)){
 					printf("Identifiant valide\n");
-
 					// Génération de clé, IV
 					buffRand(iniKey,32);
 					buffRand(iv,16);
@@ -100,7 +99,6 @@ int main(void)
 
 					// Initialisation de la clé d'authentification
 					aes_key_setup(hMpdSel,authKey,256);
-
 					// Envoi du sel
 					tag = SER_AUTH;
 					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
@@ -118,16 +116,16 @@ int main(void)
 				} else{
 					printf("Identifiant invalide\n");
 
-					// Envoi de valeur aléatoires
-					buffRand(bufferOut, 32);
-					tag = SER_AUTH;
-					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
-					buffRand(bufferOut, 16);
-					tag = SER_AUTH;
-					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
-					buffRand(bufferOut, 32);
-					tag = SER_AUTH;
-					netWrite(&tag,sel,SHA256_BLOCK_SIZE);
+					// // Envoi de valeur aléatoires
+					// buffRand(bufferOut, 32);
+					// tag = SER_AUTH;
+					// netWrite(&tag,sel,SHA256_BLOCK_SIZE);
+					// buffRand(bufferOut, 16);
+					// tag = SER_AUTH;
+					// netWrite(&tag,sel,SHA256_BLOCK_SIZE);
+					// buffRand(bufferOut, 32);
+					// tag = SER_AUTH;
+					// netWrite(&tag,sel,SHA256_BLOCK_SIZE);
 				}
 			}
 			else if(tag == CLI_MES && authent){

@@ -28,7 +28,7 @@ void netServListen(){
 }
 
 
-int netServAccept(){	
+int netServAccept(){
 	struct sockaddr_in si_other;
 	size_t slen = sizeof(si_other);
 	sock = accept(servSock, (struct sockaddr * __restrict__) &si_other, (socklen_t * __restrict__) &slen);
@@ -63,6 +63,10 @@ int netConnect(char* ip){
 
 void netWrite(TAG* t, unsigned char* buffer, size_t bufferSize){
 	write(sock, t, 1);
+	write(sock, buffer, bufferSize);
+}
+
+void netWriteRaw(unsigned char* buffer, size_t bufferSize){
 	write(sock, buffer, bufferSize);
 }
 

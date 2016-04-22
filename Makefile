@@ -11,6 +11,10 @@ client.o : client.c
 	# compiling client
 	$(CC) $(CFLAGS) -c client.c -o client.o
 
+clientFuzzer.o : clientFuzzer.c
+	# compiling clientFuzzer
+	$(CC) $(CFLAGS) -c clientFuzzer.c -o clientFuzzer.o
+
 aes.o : aes.h aes.c
 	# compiling aes.c
 	$(CC) $(CFLAGS) -c aes.c -o aes.o
@@ -26,6 +30,10 @@ network.o : network.h network.c
 client : network.o sha256.o  aes.o client.o
 	# linking object code to binary
 	$(CC) $(CFLAGS) network.o sha256.o aes.o client.o -o client
+
+clientFuzzer : network.o sha256.o  aes.o clientFuzzer.o
+	# linking object code to binary
+	$(CC) $(CFLAGS) network.o sha256.o aes.o clientFuzzer.o -o clientFuzzer
 
 serveur : network.o sha256.o aes.o serveur.o
 	# linking object code to binary
